@@ -29,6 +29,7 @@ DOMAIN_ALT = "bytick"
 class _V5HTTPManager:
     testnet: bool = field(default=False)
     domain: str = field(default="bybit")
+    subdomain: str = field(default="api-testnet")
     api_key: str = field(default=None)
     api_secret: str = field(default=None)
     logging_level: logging = field(default=logging.INFO)
@@ -51,7 +52,11 @@ class _V5HTTPManager:
     return_response_headers: bool = field(default=False)
 
     def __post_init__(self):
-        subdomain = SUBDOMAIN_TESTNET if self.testnet else SUBDOMAIN_MAINNET
+        if self.testnet:
+            subdomain = SUBDOMAIN_TESTNET
+        else:
+            subdomain = self.subdomain if self.subdomain else SUBDOMAIN_MAINNET
+        domain = DOMAIN_MAIN if not self.domain else self.domain
         domain = DOMAIN_MAIN if not self.domain else self.domain
         url = HTTP_URL.format(SUBDOMAIN=subdomain, DOMAIN=domain)
         self.endpoint = url
@@ -221,9 +226,7 @@ class _V5HTTPManager:
                         f"Headers: {headers}"
                     )
                 else:
-                    self.logger.debug(
-                        f"Request -> {method} {path}. Headers: {headers}"
-                    )
+                    self.logger.debug(f"Request -> {method} {path}. Headers: {headers}")
 
             if method == "GET":
                 if req_params:
@@ -238,9 +241,7 @@ class _V5HTTPManager:
                     )
             else:
                 r = self.client.prepare_request(
-                    requests.Request(
-                        method, path, data=req_params, headers=headers
-                    )
+                    requests.Request(method, path, data=req_params, headers=headers)
                 )
 
             # Attempt the request.
@@ -322,10 +323,15 @@ class _V5HTTPManager:
                         )
 
                         # Calculate how long we need to wait in milliseconds.
-                        limit_reset_time = int(s.headers["X-Bapi-Limit-Reset-Timestamp"])
-                        limit_reset_str = dt.fromtimestamp(limit_reset_time / 10**3).strftime(
-                            "%H:%M:%S.%f")[:-3]
-                        delay_time = (int(limit_reset_time) - _helpers.generate_timestamp()) / 10**3
+                        limit_reset_time = int(
+                            s.headers["X-Bapi-Limit-Reset-Timestamp"]
+                        )
+                        limit_reset_str = dt.fromtimestamp(
+                            limit_reset_time / 10**3
+                        ).strftime("%H:%M:%S.%f")[:-3]
+                        delay_time = (
+                            int(limit_reset_time) - _helpers.generate_timestamp()
+                        ) / 10**3
                         error_msg = (
                             f"API rate limit will reset at {limit_reset_str}. "
                             f"Sleeping for {int(delay_time * 10**3)} milliseconds"
@@ -349,12 +355,14 @@ class _V5HTTPManager:
                     )
             else:
                 if self.log_requests:
-                    self.logger.debug(
-                        f"Response headers: {s.headers}"
-                    )
+                    self.logger.debug(f"Response headers: {s.headers}")
 
                 if self.return_response_headers:
-                    return s_json, s.elapsed, s.headers,
+                    return (
+                        s_json,
+                        s.elapsed,
+                        s.headers,
+                    )
                 elif self.record_request_time:
                     return s_json, s.elapsed
                 else:

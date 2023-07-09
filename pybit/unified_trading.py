@@ -12,6 +12,7 @@ from ._v5_position import PositionHTTP
 from ._v5_spot_leverage_token import SpotLeverageHTTP
 from ._v5_spot_margin_trade import SpotMarginTradeHTTP
 from ._v5_user import UserHTTP
+from ._v1_copytrading import CopyTradingHTTP
 from ._websocket_stream import _V5WebSocketManager
 
 
@@ -37,6 +38,7 @@ class HTTP(
     SpotLeverageHTTP,
     SpotMarginTradeHTTP,
     UserHTTP,
+    CopyTradingHTTP,
 ):
     def __init__(self, **args):
         super().__init__(**args)
@@ -45,15 +47,11 @@ class HTTP(
 class WebSocket(_V5WebSocketManager):
     def _validate_public_topic(self):
         if "/v5/public" not in self.WS_URL:
-            raise TopicMismatchError(
-                "Requested topic does not match channel_type"
-            )
+            raise TopicMismatchError("Requested topic does not match channel_type")
 
     def _validate_private_topic(self):
         if not self.WS_URL.endswith("/private"):
-            raise TopicMismatchError(
-                "Requested topic does not match channel_type"
-            )
+            raise TopicMismatchError("Requested topic does not match channel_type")
 
     def __init__(
         self,
